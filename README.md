@@ -3,6 +3,7 @@
 This repository contains the data, code, and materials for the paper:
 
 **"The Political Economy of Fossil Fuel Subsidy Removal: Evidence from Bolivia and Mexico"**
+📄 [Read the full paper on the IMF website](https://www.imf.org/en/Publications/WP/Issues/2024/11/01/The-Political-Economy-of-Fossil-Fuel-Subsidy-Removal-Evidence-from-Bolivia-and-Mexico-556856)
 
 ## Overview
 
