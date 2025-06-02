@@ -1,0 +1,15 @@
+transforming_date <- function(x){
+  x <- gsub("Enero","01", x)                  
+  x <- gsub("Febrero","02", x)                  
+  x <- gsub("Marzo","03", x)                  
+  x <- gsub("Abril","04", x)                  
+  x <- gsub("Mayo","05", x)                  
+  x <- gsub("Junio","06", x)                  
+  x <- gsub("Julio","07", x)                  
+  x <- gsub("Agosto","08", x)                  
+  x <- gsub("Septiembre","09", x)                  
+  x <- gsub("Octubre","10", x)                  
+  x <- gsub("Noviembre","11", x)                  
+  x <- gsub("Diciembre","12", x)
+  return(x)
+}

@@ -7,7 +7,7 @@
 gc()
 rm(list = ls())
 getwd()
-setwd("/Users/montesdeoca/Dropbox/FoReSee - DIW/FFSubsidies")
+setwd("/Users/montesdeoca/Dropbox/PoliticalEconomyFuelSubsidies")
 library(foreign)
 library(zoo)
 library(dplyr)
@@ -30,10 +30,13 @@ options(scipen=999)
 
 ##########################
 
-
-##### 1. Master data on approval  #### -----------------------------------------------------------------------------
+####################################################
+##### 1.  Loading data on approval ################ -----------------------------------------------------------------------------
+####################################################
+##### 1.1 Loading data and cleaning data       ####
+getwd()
 # setwd("D:/users/mmontesdeoca/Dropbox/FoReSee - DIW/FFSubsidies/03_Data_Country by country/Mexico_gasoline/01_Data")
-data <- read.csv("03_Data_Country by country/Executive approval database/EAD+2.0+quarter+101019.csv")
+data <- read.csv("02_RawData/EAD+2.0+quarter+101019.csv")
 #formatting dates
 data$quarterly = as.yearqtr(data$qtr,format="%Yq%q")
 data$last_month = as.Date(data$quarterly, frac=1)
@@ -50,8 +53,13 @@ data <- data %>% dplyr::select("country"="Country", "qtr","last_month","quarterl
   dplyr::filter(country %in% target)  
 #order data 
 data = data[order(data$country, data$last_month), ] 
-##########################
-##### 1.1 adding president dummies Argentina ####
+
+
+
+####################################################
+##### 2.  Adding president/term dummy vars ######### -----------------------------------------------------------------------------
+####################################################
+##### 2.1 Argentina ####
 Argentina <- data %>%
   filter(country == "Argentina") %>%
   mutate(presidents = case_when(
@@ -78,118 +86,7 @@ Argentina <- Argentina %>%
 
 is.ordered(Argentina$presidents)
 
-ggplot(subset(Argentina, country=="Argentina"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Argentina", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-# data$p_alfonsin <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("11/30/1983", format = "%m/%d/%Y") &
-#                                                                   data$last_month <= as.Date("07/8/1989", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_menem_first <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("07/8/1989", format = "%m/%d/%Y") &
-#                                                                      data$last_month <= as.Date("07/8/1995", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_menem_second <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("07/8/1995", format = "%m/%d/%Y") &
-#                                                                       data$last_month <= as.Date("12/10/1999", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_delarua <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("12/10/1999", format = "%m/%d/%Y") &
-#                                                                  data$last_month <= as.Date("12/20/2001", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_duhalde <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("12/30/2001", format = "%m/%d/%Y") &
-#                                                                  data$last_month <= as.Date("05/25/2003", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_kirchner <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("05/25/2003", format = "%m/%d/%Y") &
-#                                                                   data$last_month <= as.Date("12/10/2007", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_fernandezdek_first  <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("12/10/2007", format = "%m/%d/%Y") &
-#                                                                              data$last_month <= as.Date("12/10/2011", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_fernandezdek_second  <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("12/10/2011", format = "%m/%d/%Y") &
-#                                                                               data$last_month <= as.Date("12/10/2015", format = "%m/%d/%Y"), 1, 0),0)
-#  data$p_macri  <- ifelse( data$country == "Argentina", ifelse(data$last_month > as.Date("12/10/2015", format = "%m/%d/%Y") &
-#                                                                 data$last_month <= as.Date("12/10/2019", format = "%m/%d/%Y"), 1, 0),0)
-#  data$otro_argentina <- ifelse(data$country != "Argentina", 1, 0)
-# 
-# 
-# #creating the duration variable
-# alfonsin=seq(1:nrow(data[data$p_alfonsin==1,]))
-# menemfirst=seq(1:nrow(data[data$p_menem_first==1,]))
-# menemsecond=seq(1:nrow(data[data$p_menem_second==1,]))
-# delarua=seq(1:nrow(data[data$p_delarua==1,]))
-# duhalde=seq(1:nrow(data[data$p_duhalde==1,]))
-# kirchner=seq(1:nrow(data[data$p_kirchner==1,]))
-# fernandezdekfirst=seq(1:nrow(data[data$p_fernandezdek_first==1,]))
-# fernandezdeksecond=seq(1:nrow(data[data$p_fernandezdek_second==1,]))
-# macri=seq(1:nrow(data[data$p_macri==1,]))
-# arg_duration=c(alfonsin, menemfirst, menemsecond,
-#                delarua, duhalde, kirchner, fernandezdekfirst, fernandezdeksecond,
-#                macri)
-# arg_duration
-# length(arg_duration)
-# nrow(data[data$country=="Argentina",])
-# rm(alfonsin, menemfirst, menemsecond,
-#    delarua, duhalde, kirchner, fernandezdekfirst, fernandezdeksecond,
-#    macri)
-# # Converting the dummy variables of president into a single categorical variable
-# df2 <- data.frame(Alfonsin=data$p_alfonsin, Menem_first=data$p_menem_first, Menem_second=data$p_menem_second, Delarua=data$p_delarua,
-#                   Duhalde=data$p_duhalde, Kirchner=data$p_kirchner,
-#                   Fernandezdek_first=data$p_fernandezdek_first, Fernandezdek_second=data$p_fernandezdek_second, Macri=data$p_macri,
-#                   Otro=data$otro_argentina)
-# df3 <- data.matrix(df2, rownames.force = NA)
-# data$presidents_arg = factor((df3 %*% (1:ncol(df3))), levels=c( "1", "2", "3", "4", "5", "6", "7", "8","9", "0"), 
-#                              labels=c("Alfonsin","Menem_first", "Menem_second", "Delarua",
-#                                       "Duhalde", "Kirchner", "Fernandezdek_first", "Fernandezdek_second", "Macri", "Otro"))
-# # View(data$presidents_arg)
-# Argentina2=data.frame(country=data$country, presidents_arg=data$presidents_arg, Alfonsin=data$p_alfonsin, Menem_first=data$p_menem_first, 
-#                      Menem_second=data$p_menem_second, Delarua=data$p_delarua, 
-#                      Duhalde=data$p_duhalde, Kirchner=data$p_kirchner, 
-#                      Fernandezdek_first=data$p_fernandezdek_first, Fernandezdek_second=data$p_fernandezdek_second, Macri=data$p_macri,
-#                      Otro=data$otro_argentina)
-# colnames(Argentina2)
-# 
-# 
-# 
-# 
-# # View(Argentina)
-# # View(data$presidents_arg)
-# data=subset(data, select=-c(p_alfonsin, p_menem_first, p_menem_second, p_delarua, p_duhalde, p_kirchner, p_fernandezdek_first,
-#                             p_fernandezdek_second, p_macri, otro_argentina))
-# rm(Argentina2, df2, df3)
-# 
-# Argentina2 <- data %>% dplyr::select(country, qtr, last_month, quarterly, year, quarter, approval_smoothed,
-#                                     approval_not_smoothed, net_smoothed, net_not_smoothed, relative_smoothed, relative_not_smoothed,
-#                                     presidents=presidents_arg) %>% filter(country=="Argentina")
-# 
-# #Approval plot
-# ggplot(subset(data, country=="Argentina"), aes(x=last_month, y=approval_not_smoothed)) +
-#   geom_line(aes(col=presidents_arg), size=1.5) +
-#   labs(title ="Argentina", subtitle = "Approval by president",
-#        y ="Approval", x = "Date") + theme_minimal() 
-# 
-# ggplot(subset(Argentina, country=="Argentina"), aes(x=last_month, y=approval_not_smoothed)) +
-#   geom_line(aes(col=presidents), size=1.5) +
-#   labs(title ="Argentina", subtitle = "Approval by president",
-#        y ="Approval", x = "Date") + theme_minimal() 
-# colnames(Argentina)
-# 
-# # List of dummy variable names to compare
-# dummy_vars <- c("country", "qtr", "last_month", "quarterly", "year", "quarter", "approval_smoothed",
-#                 "approval_not_smoothed", "net_smoothed", "net_not_smoothed", "relative_smoothed",
-#                 "relative_not_smoothed", "presidents")
-
-# Filter only relevant columns and arrange for alignment
-compare_data <- function(df, varlist) {
-  df %>%
-    select(country, last_month, all_of(varlist)) %>%
-    arrange(country, last_month)
-}
-
-d1 <- compare_data(Argentina, dummy_vars)
-d2 <- compare_data(Argentina2, dummy_vars)
-
-# Check for equality
-all_equal_result <- all.equal(d1, d2, check.attributes = FALSE)
-
-if (isTRUE(all_equal_result)) {
-  cat("✅ Datasets are identical in the specified dummy variables.\n")
-} else {
-  cat("❌ Datasets differ:\n")
-  print(all_equal_result)
-}
-
-##### 1.2 adding president dummies Bolivia ####
+##### 2.2 Bolivia ####
 Bolivia <- data %>%
   filter(country == "Bolivia") %>%
   mutate(presidents = case_when(
@@ -215,11 +112,7 @@ Bolivia <- Bolivia %>%
 
 is.ordered(Bolivia$presidents)
 
-ggplot(subset(Bolivia, country=="Bolivia"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Bolivia", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.3 adding president dummies Brazil ####
+##### 2.3 Brazil ####
 Brazil <- data %>%
   filter(country == "Brazil") %>%
   mutate(presidents = case_when(
@@ -249,12 +142,7 @@ Brazil <- Brazil %>%
 
 is.ordered(Brazil$presidents)
 
-ggplot(subset(Brazil, country=="Brazil"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Brazil", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-##### 1.4 adding president dummies Chile ####
+##### 2.4 Chile ####
 Chile <- data %>%
   filter(country == "Chile") %>%
   mutate( presidents = case_when(
@@ -277,13 +165,7 @@ Chile <- Chile %>%
   ungroup()
 
 is.ordered(Chile$presidents)
-
-#Approval plot
-ggplot(subset(Chile, country=="Chile"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Chile", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.5 adding president dummies Colombia ####
+##### 2.5 Colombia ####
 Colombia <- data %>%
   filter(country == "Colombia") %>%
   mutate( presidents = case_when(
@@ -310,13 +192,8 @@ Colombia <- Colombia %>%
   ungroup()
 
 is.ordered(Chile$presidents)
-
-#Approval plot
-ggplot(subset(Colombia, country=="Colombia"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Colombia", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.6 adding president dummies Costa Rica ####
+ 
+##### 2.6 Costa Rica ####
 CostaRica <- data %>%
   filter(country == "Costa Rica") %>%
   mutate(presidents = case_when(
@@ -345,13 +222,7 @@ CostaRica <- CostaRica %>%
   ungroup()
 
 is.ordered(CostaRica$presidents)
-
-#Approval plot
-ggplot(subset(CostaRica, country=="Costa Rica"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Costa Rica", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.7 adding president dummies Dominican Republic ####
+##### 2.7 Dominican Republic ####
 DominicanRepublic <- data %>%
   filter(country == "Dominican Republic") %>%
   mutate(presidents = case_when(
@@ -372,13 +243,7 @@ DominicanRepublic <- DominicanRepublic %>%
   ungroup()
 
 is.ordered(DominicanRepublic $presidents)
-
-#Approval plot
-ggplot(subset(DominicanRepublic, country=="Dominican Republic"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Dominican Republic", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.8 adding president dummies Ecuador ####
+##### 2.8 Ecuador ####
 Ecuador <- data %>%
   filter(country == "Ecuador") %>%
   mutate(presidents = case_when(
@@ -409,13 +274,7 @@ Ecuador <- Ecuador %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Ecuador $presidents)
-
-#Approval plot
-ggplot(subset(Ecuador, country=="Ecuador"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Ecuador", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.9 adding president dummies El Salvador ####
+##### 2.9 El Salvador ####
 ElSalvador <- data %>%
   filter(country == "ElSalvador") %>%
   mutate(presidents = case_when(
@@ -436,13 +295,7 @@ ElSalvador <- ElSalvador %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(ElSalvador $presidents)
-
-#Approval plot
-ggplot(subset(ElSalvador, country=="ElSalvador"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="El Salvador", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.10 adding president dummies Guatemala ####
+##### 2.10 Guatemala ####
 Guatemala <- data %>%
   filter(country == "Guatemala") %>%
   mutate(presidents = case_when(
@@ -468,12 +321,7 @@ Guatemala <- Guatemala %>% group_by(presidents) %>%
 
 is.ordered(Guatemala $presidents)
 
-#Approval plot
-ggplot(subset(Guatemala, country=="Guatemala"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Guatemala", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.11 adding president dummies Honduras ####
+##### 2.11 Honduras ####
 Honduras <- data %>%
   filter(country == "Honduras") %>%
   mutate(presidents = case_when(
@@ -499,13 +347,8 @@ Honduras <- Honduras %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Honduras $presidents)
-
-#Approval plot
-ggplot(subset(Honduras, country=="Honduras"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Honduras", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.12 adding president dummies Mexico ####
+ 
+##### 2.12 Mexico ####
 Mexico <- data %>%
   filter(country == "Mexico") %>%
   mutate(presidents = case_when(
@@ -527,16 +370,7 @@ Mexico <- Mexico %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Mexico $presidents)
-
-#Approval plot
-ggplot(subset(Mexico, country=="Mexico"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Mexico", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-ggsave(path="03_Data_Country by country/Mexico_gasoline/01_Data/06_Figures",
-       filename="Approval_mex_V2.png", width=5, height=5)
-##### 1.13 adding president dummies Nicaragua ####
+##### 2.13 Nicaragua ####
 Nicaragua <- data %>%
   filter(country == "Nicaragua") %>%
   mutate(presidents = case_when(
@@ -558,14 +392,7 @@ Nicaragua <- Nicaragua %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Nicaragua $presidents)
-
-#Approval plot
-ggplot(subset(Nicaragua, country=="Nicaragua"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Nicaragua", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-##### 1.14 adding president dummies Panama ####
+##### 2.14 Panama ####
 Panama <- data %>%
   filter(country == "Panama") %>%
   mutate(presidents = case_when(
@@ -588,13 +415,7 @@ Panama <- Panama %>% group_by(presidents) %>%
 
 is.ordered(Panama $presidents)
 
-#Approval plot
-ggplot(subset(Panama, country=="Panama"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Panama", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-##### 1.15 adding president dummies Paraguay ####
+##### 2.15 Paraguay ####
 Paraguay <- data %>%
   filter(country == "Paraguay") %>%
   mutate(presidents = case_when(
@@ -617,14 +438,7 @@ Paraguay <- Paraguay %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Paraguay $presidents)
-
-#Approval plot
-ggplot(subset(Paraguay, country=="Paraguay"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Paraguay", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-##### 1.16 adding president dummies Peru ####
+##### 2.16 Peru ####
 Peru <- data %>%
   filter(country == "Peru") %>%
   mutate(presidents = case_when(
@@ -652,12 +466,7 @@ Peru <- Peru %>% group_by(presidents) %>%
 
 is.ordered(Peru $presidents)
 
-#Approval plot
-ggplot(subset(Peru, country=="Peru"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Peru", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-##### 1.17 adding president dummies United States ####
+##### 2.17 United States ####
 UnitedStates <- data %>%
   filter(country == "United States") %>%
   mutate(presidents = case_when(
@@ -699,17 +508,7 @@ UnitedStates <- UnitedStates %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(UnitedStates $presidents)
-
-#Approval plot
-ggplot(subset(UnitedStates, country=="United States"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="United States", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
- 
-ggsave(path="03_Data_Country by country/Mexico_gasoline/01_Data/06_Figures",
-       filename="Approval_us.pngV2", width=5, height=5)
-
-##### 1.18 adding president dummies Uruguay ####
+##### 2.18 Uruguay ####
 Uruguay <- data %>%
   filter(country == "Uruguay") %>%
   mutate(presidents = case_when(
@@ -731,70 +530,31 @@ Uruguay <- Uruguay %>% group_by(presidents) %>%
   ungroup()
 
 is.ordered(Uruguay$presidents)
-
-#Approval plot
-ggplot(subset(Uruguay, country=="Uruguay"), aes(x=last_month, y=approval_not_smoothed)) +
-  geom_line(aes(col=presidents), size=1.5) +
-  labs(title ="Uruguay", subtitle = "Approval by president",
-       y ="Approval", x = "Date") + theme_minimal() 
-
-##### 1.19 Rbinding  the diferent datasets ####
+##### 2.19 Rbinding  the diferent datasets ####
 unique(data$country)
+
 vars=list(Argentina, Bolivia, Brazil, Chile, Colombia, CostaRica, DominicanRepublic, Ecuador, ElSalvador, Guatemala,
           Honduras, Mexico, Nicaragua, Panama, Paraguay, Peru, UnitedStates, Uruguay)
-data2=do.call("rbind", vars)
+
+data=do.call("rbind", vars)
+
 rm(Argentina, Bolivia, Brazil, Chile, Colombia, CostaRica, DominicanRepublic, Ecuador, ElSalvador, Guatemala,
    Honduras, Mexico, Nicaragua, Panama, Paraguay, Peru, UnitedStates, Uruguay, vars, target)
 
-setdiff(data, data2)
-data=data2
-rm(data2, comparison)
 str(data)
 levels(data$presidents)
 
 data$duration.sqr=data$duration*data$duration
 data$honey=ifelse(data$duration<=3, 1, 0)
+
 write_csv(data, "11_GeneratedData/01_Approval/Approval_LAC_president_dummies_V3.csv")
 
 ##########################
-##### 2. Obtaining price data from the World petrol prices dataset #####
-prices <- read.csv("03_Data_Country by country/Master database/world_petrol_prices.csv")
 
-prices=prices%>%select(country=Country,
-                       date=Date, currency_gpp=Currency, gasoline_gpp=Gasoline.octane.95, diesel_gpp=Diesel,
-                       lpg_gpp=LPG, exchange_rate_gpp=U.S..dollar.exchange.rate)
-
-prices=prices%>% mutate(date=as.Date(prices$date, format="%d.%m.%Y"))
-
-# #converting weekly to monthly 
-prices = prices %>% group_by(country, date=format(as.yearqtr(date, "%b-%Y"), "%Yq%q")) %>%
-  summarise(currency_gpp=max(currency_gpp),
-            gasoline_gpp=mean(gasoline_gpp),
-            diesel_gpp=mean(diesel_gpp),
-            lpg_gpp=mean(lpg_gpp),
-            exchange_rate_gpp=mean(exchange_rate_gpp))
-head(prices$date)
-class(prices$quarterly)
-
-
-prices$date <- as.character(prices$date)
-
-prices$quarterly = zoo::as.yearqtr(prices$date,format="%Yq%q")
-
-prices$last_month = zoo::as.Date(prices$quarterly, frac=1)
-
-prices=prices%>%select(country, last_month, currency_gpp, gasoline_gpp, diesel_gpp, lpg_gpp, exchange_rate_gpp)
-
-#joining the datasets
-data <- left_join(data, prices, by=c("country","last_month"))
-rm(prices)
-
-
-
-##########################
-##########################
+####################################################
+####################################################
 ##### 3. Adding the price data from OLADE #####
-##########################
+####################################################
 
 ##### 3.1 Argentina ######
 argentina      <- as.data.frame(read_excel("03_Data_Country by country/Olade database/olade_argentina.xlsx",sheet=2,skip=293))
