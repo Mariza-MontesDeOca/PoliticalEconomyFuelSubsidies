@@ -24,7 +24,7 @@ library(expss)
 library(xtable)
 library(digest)
 library(tidyr)
-source("05_Scripts/transforming_date.R")
+source("01_Code/01_Functions/transforming_date.R")
 options(scipen=999)
 ##########################
 
@@ -557,38 +557,30 @@ write_csv(data, "11_GeneratedData/01_Approval/Approval_LAC_president_dummies_V3.
 ####################################################
 
 ##### 3.1 Argentina ######
-argentina      <- as.data.frame(read_excel("03_Data_Country by country/Olade database/olade_argentina.xlsx",sheet=2,skip=293))
-natural_gas    <- argentina[c(1:378),c(1:2)]
+argentina      <- as.data.frame(read_excel("02_RawData/Prices_Olade/olade_argentina.xlsx",sheet=2,skip=293))
 
-colnames(natural_gas)[1] <- "date"
-colnames(natural_gas)[2] <- "nat_gas_usd"
-
-other           <- argentina[c(384:764),]
-colnames(other) <- other[1,]
-other           <- other[-1,]
-colnames(other)[1] <- "date"
-other           <- other %>% 
+argentina           <- argentina[c(384:764),]
+colnames(argentina) <- argentina[1,]
+argentina           <- argentina[-1,]
+colnames(argentina)[1] <- "date"
+argentina           <- argentina %>% 
                     dplyr::select(date, diesel_usd="Diésel Oil", 
                                   hi_oct_usd="Gasolina Premiun", 
                                   lo_oct_usd="Gasolina Regular" )
 
-argentina        = full_join(other, natural_gas, by="date")
-
-rm(natural_gas, other)
-
 argentina$date      <- seq(as.Date("1988/01/01"), as.Date("2019/08/01"),"months")
-cols.num            <- c("lo_oct_usd", "hi_oct_usd", "diesel_usd", "nat_gas_usd")
+cols.num            <- c("lo_oct_usd", "hi_oct_usd", "diesel_usd")
 argentina[cols.num] <- sapply(argentina[cols.num],as.numeric)
 
 sapply(argentina, class)
 
 #converting to local currency
-exchange              <- as.data.frame(read_excel("03_Data_Country by country/Olade database/olade_exchange_rates.xlsx",sheet=2,skip=1998))
+exchange              <- as.data.frame(read_excel("02_RawData/Exchange_Rates/olade_exchange_rates.xlsx",sheet=2,skip=1998))
 exchange              <- exchange[c(1:298),]
 colnames(exchange)[1] <- "date"
 colnames(exchange)[2] <- "exchange_olade"
 
-source("05_Scripts/transforming_date.R")
+source("01_Code/01_Functions/transforming_date.R")
 
 exchange$date         <- transforming_date(exchange$date)
 exchange$year         <- substr(exchange$date, 6,9)
@@ -600,7 +592,7 @@ exchange               = exchange %>% drop_na(date)
 
 argentina             <- left_join(argentina, exchange, by="date")
 
-exchange_fred         <- read_csv("/Users/montesdeoca/Dropbox/FoReSee - DIW/FFSubsidies/03_Data_Country by country/Exchange rates/argentina.csv")
+exchange_fred         <- read_csv("02_RawData/Exchange_rates/argentina.csv")
 colnames(exchange_fred)[1] <- "date"
 colnames(exchange_fred)[2] <- "exchange_fred"
 exchange_fred$date         <- as.Date(exchange_fred$date)
@@ -609,32 +601,29 @@ argentina                  <- left_join(argentina, exchange_fred, by="date")
 #we use the exchange rate with less NAs according to the next funciton:
 ifelse(sum(is.na(argentina$exchange_fred))>=sum(is.na(argentina$exchange_olade)),"Olade", "Fred")
 # A smarter one
-datframe_fred               = argentina %>% select(hi_oct_usd, lo_oct_usd, diesel_usd, nat_gas_usd, exchange_fred)
-datframe_olade              = argentina %>% select(hi_oct_usd, lo_oct_usd, diesel_usd, nat_gas_usd,exchange_olade)
+datframe_fred               = argentina %>% select(hi_oct_usd, lo_oct_usd, diesel_usd, exchange_fred)
+datframe_olade              = argentina %>% select(hi_oct_usd, lo_oct_usd, diesel_usd, exchange_olade)
 ifelse(sum(is.na(datframe_fred))>=sum(is.na(datframe_olade)),"Olade", "Fred")
 #we use the Fred exchange rate
 argentina$lo_oct_local      = argentina$lo_oct_usd*argentina$exchange_fred
 argentina$hi_oct_local      = argentina$hi_oct_usd*argentina$exchange_fred
 argentina$diesel_local      = argentina$diesel_usd*argentina$exchange_fred
-argentina$nat_gas_local     = argentina$nat_gas_usd*argentina$exchange_fred
 argentina$exchange_olade    =as.numeric(argentina$exchange_olade)
 argentina$country           ="Argentina"
 argentina_monthly           =argentina
 argentina_monthly           = argentina_monthly %>% 
                               select(date, country, lo_oct_usd, hi_oct_usd, diesel_usd, 
-                                     nat_gas_usd,lo_oct_local, hi_oct_local, diesel_local,
-                                     nat_gas_local, exchange_olade, exchange_fred)
+                                     lo_oct_local, hi_oct_local, diesel_local,
+                                      exchange_olade, exchange_fred)
 # #converting monnthly to quarterly
 argentina                   = argentina %>% 
                               group_by(date=format(as.yearqtr(date, "%b-%Y"), "%Yq%q")) %>%
                               summarise(lo_oct_usd=mean(lo_oct_usd, na.rm=T),
                                         hi_oct_usd=mean(hi_oct_usd, na.rm=T),
                                         diesel_usd=mean(diesel_usd, na.rm=T),
-                                        nat_gas_usd=mean(nat_gas_local, na.rm=T),
                                         lo_oct_local=mean(lo_oct_local, na.rm=T),
                                         hi_oct_local=mean(hi_oct_local, na.rm=T),
                                         diesel_local=mean(diesel_local, na.rm=T),
-                                        nat_gas_local=mean(nat_gas_local, na.rm=T), 
                                         exchange_olade=mean(exchange_olade),
                                         exchange_fred=mean(exchange_fred))
 argentina$quarterly         = as.yearqtr(argentina$date,format="%Yq%q")
@@ -647,73 +636,52 @@ summary(argentina)
 argentina$lo_oct_local[is.nan(argentina$lo_oct_local)]=NA
 argentina$hi_oct_local[is.nan(argentina$hi_oct_local)]=NA
 argentina$diesel_local[is.nan(argentina$diesel_local)]=NA
-argentina$nat_gas_local[is.nan(argentina$nat_gas_local)]=NA
 
-argentina                     =argentina %>% 
-                              mutate(sum = select(., lo_oct_local, hi_oct_local, diesel_local) %>% 
-                              rowSums(na.rm = F))
-index_base=argentina$sum[1]
-argentina$price_ind            =(argentina$sum/index_base)*100
-colnames(argentina)
-argentina[argentina == 0]     <- NA
-
-# Creating the pace variable and adding it to the dataset
-# We create the dummy variable with those values (price hikes) higher than the 90 percentile
-argentina$diff_lo_oct         <- c(NA, diff(argentina$lo_oct_local, lag=1, differences=1))
-argentina$pace_lo_oct          <- ifelse(argentina$diff_lo_oct>=quantile(argentina$diff_lo_oct, .75, na.rm=TRUE), 1 , 0)
-# argentina$pace_lo_oct =argentina$pace_dummy*argentina$price_diff_lo
-argentina$diff_price_ind       <- c(NA, diff(argentina$price_ind, lag=1, differences=1))
-argentina$pace_price_ind       <- ifelse(argentina$diff_price_ind>=quantile(argentina$diff_price_ind, .75, na.rm=TRUE), 1 , 0)
-# argentina$pace_price_ind =argentina$pace_price_ind*argentina$diff_price_ind
-
-argentina = argentina %>% select(date, quarterly, last_month, country, lo_oct_usd, hi_oct_usd, diesel_usd, nat_gas_usd,
-                                 lo_oct_local, hi_oct_local, diesel_local, nat_gas_local, price_ind, exchange_olade, exchange_fred,
-                                 pace_lo_oct, pace_price_ind)
+argentina = argentina %>% select(date, quarterly, last_month, country, lo_oct_usd, hi_oct_usd, diesel_usd, 
+                                 lo_oct_local, hi_oct_local, diesel_local,  exchange_olade, exchange_fred)
 
 ##### 3.2 Bolivia  ######
 #Important: prices from OLADE for Bol are in (US$/bbl)
-bolivia             <- as.data.frame(read_excel("03_Data_Country by country/Olade database/olade_bolivia.xlsx",sheet=2,skip=296))
-natural_gas         <- bolivia[c(1:229),c(1:2)]
-colnames(natural_gas)[1] <- "date"
-colnames(natural_gas)[2] <- "nat_gas_usd"
-other <- bolivia[c(234:539),] #data set of the other fuels
-colnames(other) <- other[1,]
-other <- other[-1,]
-colnames(other)[1] <- "date"
-other <- other %>% dplyr::select(date, diesel_usd="Diésel Oil", hi_oct_usd="Gasolina Premiun", lo_oct_usd="Gasolina Regular" )
-bolivia = full_join(other, natural_gas, by="date")
-rm(natural_gas, other)
-bolivia= bolivia[-305,]
-bolivia2 = data.frame(date=seq(as.Date("2007/01/01"), as.Date("2009/12/01"), "months"),
-                      diesel_usd=NA, hi_oct_usd=NA, lo_oct_usd=NA, nat_gas_usd=NA)
-bolivia2$diesel_usd[6] = 74.30
-bolivia2$hi_oct_usd[6] = 95.67
-bolivia2$lo_oct_usd[6] = 74.70
-bolivia2$diesel_usd[18] = 83.07
-bolivia2$hi_oct_usd[18] = 106.96
-bolivia2$lo_oct_usd[18] = 83.51
-bolivia2$diesel_usd[23] = 84.24
-bolivia2$hi_oct_usd[23] = 108.47
-bolivia2$lo_oct_usd[23] = 84.72
-bolivia2$diesel_usd[30] = 83.65
-bolivia2$hi_oct_usd[30] = 107.72
-bolivia2$lo_oct_usd[30] = 84.10
-bolivia1=bolivia[c(1:228),]
-bolivia3=bolivia[c(233:304),]
-bolivia4 = data.frame(date=seq(as.Date("2016/01/01"), as.Date("2017/03/01"), "months"),
-                      diesel_usd="84.9759759465817", hi_oct_usd="109.417990533367", lo_oct_usd="85.432836032316", nat_gas_usd=NA)
-bolivia=rbind(bolivia1, bolivia2, bolivia3, bolivia4)
-bolivia$date <- seq(as.Date("1988/01/01"), as.Date("2017/03/01"),"months")
-cols.num <- c("lo_oct_usd", "hi_oct_usd", "diesel_usd", "nat_gas_usd")
+bolivia             <- as.data.frame(read_excel("02_RawData/Prices_Olade/olade_bolivia.xlsx",sheet=2,skip=296))
+bolivia <- bolivia[c(234:539),] #data set of the bolivia fuels
+colnames(bolivia) <- bolivia[1,]
+bolivia <- bolivia[-1,]
+colnames(bolivia)[1] <- "date"
+bolivia <- bolivia %>% dplyr::select(date, diesel_usd="Diésel Oil", hi_oct_usd="Gasolina Premiun", lo_oct_usd="Gasolina Regular" )
+
+rownames(bolivia) <- NULL
+
+meses <- c("Enero" = "01", "Febrero" = "02", "Marzo" = "03", "Abril" = "04",
+           "Mayo" = "05", "Junio" = "06", "Julio" = "07", "Agosto" = "08",
+           "Septiembre" = "09", "Octubre" = "10", "Noviembre" = "11", "Diciembre" = "12")
+
+bolivia <- bolivia %>%
+  mutate(
+    date_clean = str_squish(date),                              # Remove irregular spacing
+    month = str_trim(str_extract(date_clean, "^[^-]+")),        # Before the dash
+    year = str_trim(str_extract(date_clean, "[0-9]{4}$")),      # Year at the end
+    month_num = meses[month],
+    date_str = paste(year, month_num, "01", sep = "-"),
+    date = as.Date(date_str)) 
+
+# Create a full sequence of months
+full_dates <- data.frame(date = seq.Date(from = min(bolivia$date),
+                                         to = max(bolivia$date),
+                                         by = "month"))
+
+bolivia <- full_dates %>%
+  left_join(bolivia, by = "date") %>% select(date, diesel_usd, hi_oct_usd, lo_oct_usd)
+
+cols.num <- c("lo_oct_usd", "hi_oct_usd", "diesel_usd")
 bolivia[cols.num] <- sapply(bolivia[cols.num],as.numeric)
 sapply(bolivia, class)
 #converting to local currency
 #we have usd/bbl, we need first to convert to BOL/bbl
-exchange <- as.data.frame(read_excel("03_Data_Country by country/Olade database/olade_exchange_rates.xlsx",sheet=2,skip=347))
+exchange <- as.data.frame(read_excel("02_RawData/Exchange_Rates/olade_exchange_rates.xlsx",sheet=2,skip=347))
 exchange <- exchange[c(1:333),]
 colnames(exchange)[1] <- "date"
 colnames(exchange)[2] <- "exchange_olade"
-source("05_Scripts/transforming_date.R")
+source("01_Code/01_Functions/transforming_date.R")
 exchange$date <- transforming_date(exchange$date)
 exchange$year <- substr(exchange$date, 6,9)
 exchange$month <- substr(exchange$date, 1,2)
@@ -733,18 +701,16 @@ bolivia$nat_gas_local = bolivia$nat_gas_usd*bolivia$exchange_olade
 bolivia$exchange_fred=NA
 bolivia$country="Bolivia"
 bolivia_monthly=bolivia
-bolivia_monthly=bolivia_monthly %>% select(date, country, lo_oct_usd, hi_oct_usd, diesel_usd, nat_gas_usd,
-                                           lo_oct_local, hi_oct_local, diesel_local, nat_gas_local, exchange_olade, exchange_fred)
+bolivia_monthly=bolivia_monthly %>% select(date, country, lo_oct_usd, hi_oct_usd, diesel_usd, 
+                                           lo_oct_local, hi_oct_local, diesel_local, exchange_olade, exchange_fred)
 # #converting monthly to quarterly
 bolivia = bolivia %>% group_by(date=format(as.yearqtr(date, "%b-%Y"), "%Yq%q")) %>%
   summarise(lo_oct_usd=mean(lo_oct_usd, na.rm=T),
             hi_oct_usd=mean(hi_oct_usd, na.rm=T),
             diesel_usd=mean(diesel_usd, na.rm=T),
-            nat_gas_usd=mean(nat_gas_usd, na.rm=T),
             lo_oct_local=mean(lo_oct_local, na.rm=T),
             hi_oct_local=mean(hi_oct_local, na.rm=T),
             diesel_local=mean(diesel_local, na.rm=T),
-            nat_gas_local=mean(nat_gas_local, na.rm=T), 
             exchange_olade=mean(exchange_olade),
             exchange_fred=NA)
 bolivia$quarterly = as.yearqtr(bolivia$date,format="%Yq%q")
@@ -786,30 +752,9 @@ bolivia$hi_oct_local = bolivia$hi_oct_usd*bolivia$exchange_olade
 bolivia$diesel_local = bolivia$diesel_usd*bolivia$exchange_olade
 bolivia$nat_gas_local = bolivia$nat_gas_usd*bolivia$exchange_olade
 
-#Getting the price indicator, sum 
-bolivia=bolivia %>% mutate(sum = select(., lo_oct_local, hi_oct_local, diesel_local) %>% rowSums(na.rm = F))
-index_base=bolivia$sum[1]
-bolivia$price_ind=(bolivia$sum/index_base)*100
-colnames(bolivia)
-bolivia[bolivia== 0] <- NA
-bolivia$quarterly = as.yearqtr(bolivia$date,format="%Yq%q")
-bolivia$last_month = as.Date(bolivia$quarterly, frac=1) 
-bolivia$country=rep("Bolivia",123)
-
-
-# Creating the pace variable and adding it to the dataset
-# We create the dummy variable with those values (price hikes) higher than the 90 percentile
-bolivia$diff_lo_oct<- c(NA, diff(bolivia$lo_oct_local, lag=1, differences=1))
-bolivia$pace_lo_oct <- ifelse(bolivia$diff_lo_oct>=quantile(bolivia$diff_lo_oct, .75, na.rm=TRUE), 1 , 0)
-# bolivia$pace_lo_oct =bolivia$pace_dummy*bolivia$price_diff_lo
-bolivia$diff_price_ind<- c(NA, diff(bolivia$price_ind, lag=1, differences=1))
-bolivia$pace_price_ind <- ifelse(bolivia$diff_price_ind>=quantile(bolivia$diff_price_ind, .75, na.rm=TRUE), 1 , 0)
-# bolivia$pace_price_ind =bolivia$pace_price_ind*bolivia$diff_price_ind
-
 
 bolivia = bolivia %>% select(date, quarterly, last_month, country, lo_oct_usd, hi_oct_usd, diesel_usd, nat_gas_usd,
-                             lo_oct_local, hi_oct_local, diesel_local, nat_gas_local, price_ind, exchange_olade, exchange_fred,
-                             pace_lo_oct, pace_price_ind)
+                             lo_oct_local, hi_oct_local, diesel_local, nat_gas_local, price_ind, exchange_olade, exchange_fred)
 ?plot
 plot(bolivia$last_month, bolivia$lo_oct_local, type="l")
 
